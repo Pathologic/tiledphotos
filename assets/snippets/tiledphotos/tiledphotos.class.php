@@ -1,11 +1,11 @@
 <?php
 class themePacific_Jetpack_Tiled_Gallery_Shape {
 	static $shapes_used = array();
-	protected $modx = null;
-	public function __construct( $images, $modx ) {
+	protected $content_width = 0;
+	public function __construct( $images, $content_width ) {
 		$this->images = $images;
 		$this->images_left = count( $images );
-		$this->modx = $modx;
+		$this->content_width = $content_width;
 	}
 	public function wp_list_pluck( $list, $field, $index_key = null ) {
 		if ( ! $index_key ) {
@@ -117,8 +117,7 @@ class themePacific_Jetpack_Tiled_Gallery_Shape {
 	}
 
 	public function is_wide_theme() {
-		$content_width = $this->modx->event->params['width'];
-		return $content_width > 900;
+		return $this->content_width > 900;
 	}
 
 	public static function set_last_shape( $last_shape ) {
@@ -196,15 +195,16 @@ class themePacific_Jetpack_Tiled_Gallery_Symmetric_Row extends themePacific_Jetp
 
 class themePacific_Jetpack_Tiled_Gallery_Grouper {
 	public $margin = 4;
-	private $modx = null;
+	public $content_width = 545;
+	public $modx = null;
 	public function __construct( $attachments, $modx ) {
-		$content_width = isset($modx->event->params['width']) ? 5 + $modx->event->params['width'] : 500;
+		$this->content_width = isset($modx->event->params['width']) ? 5 + $modx->event->params['width'] : 545;
 		$this->margin = isset($modx->event->params['margin']) ? $modx->event->params['margin'] : 4;
 		$this->modx = $modx;
 		$this->last_shape = '';
 		$this->images = $this->get_images_with_sizes( $attachments );
 		$this->grouped_images = $this->get_grouped_images();
-		$this->apply_content_width( $content_width - 5 ); //reduce the margin hack to 5px. It will be further reduced when we fix more themes and the rounding error.
+		$this->apply_content_width( $this->content_width - 5 ); //reduce the margin hack to 5px. It will be further reduced when we fix more themes and the rounding error.
 	}
 
 	public function get_current_row_size() {
@@ -214,7 +214,7 @@ class themePacific_Jetpack_Tiled_Gallery_Grouper {
 
 		foreach ( array( 'One_Three', 'One_Two', 'Five', 'Four', 'Three', 'Two_One', 'Symmetric_Row' ) as $shape_name ) {
 			$class_name = "themePacific_Jetpack_Tiled_Gallery_$shape_name";
-			$shape = new $class_name( $this->images, $this->modx );
+			$shape = new $class_name( $this->images, $this->content_width );
 			if ( $shape->is_possible() ) {
 				themePacific_Jetpack_Tiled_Gallery_Shape::set_last_shape( $class_name );
 				return $shape->shape;
@@ -237,16 +237,15 @@ class themePacific_Jetpack_Tiled_Gallery_Grouper {
 
 		foreach ( $attachments as $image ) {
 			$temp = new stdClass();
-			$meta  = $this->wp_get_attachment_metadata( $image[0] );
-			$temp->post_title = $image[1];
-			$temp->image_url = $image[0];
+			$meta = json_decode($image['sg_properties'],true);
+			$temp->post_title = $image['sg_title'];
+			$temp->image_url = $image['sg_image'];
 			$temp->width_orig = ( $meta['width'] > 0 )? $meta['width'] : 1;
 			$temp->height_orig = ( $meta['height'] > 0 )? $meta['height'] : 1;
 			$temp->ratio = $temp->width_orig / $temp->height_orig;
 			$temp->ratio = $temp->ratio? $temp->ratio : 1;
 			$images_with_sizes[] = $temp;
 		}
-
 		return $images_with_sizes;
 	}
 
